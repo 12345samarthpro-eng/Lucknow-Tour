@@ -1,0 +1,222 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Deny all access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HARDENED PRIMITIVES ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email == '12345samarthpro@gmail.com' && request.auth.token.email_verified == true)
+      );
+    }
+
+    // --- ENTITY VALIDATION BLUEPRINTS ---
+    function isValidPlace(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 50 &&
+             data.locality is string && data.locality.size() >= 1 && data.locality.size() <= 120 &&
+             data.address is string && data.address.size() >= 1 && data.address.size() <= 250 &&
+             data.timings is string && data.timings.size() >= 1 && data.timings.size() <= 150 &&
+             (!('closedOn' in data) || (data.closedOn is string && data.closedOn.size() <= 80)) &&
+             data.ticketPrice is string && data.ticketPrice.size() >= 1 && data.ticketPrice.size() <= 150 &&
+             (!('bestTimeToVisit' in data) || (data.bestTimeToVisit is string && data.bestTimeToVisit.size() <= 120)) &&
+             data.description is string && data.description.size() >= 1 && data.description.size() <= 1500 &&
+             data.highlights is list && data.highlights.size() <= 10 &&
+             (data.highlights.size() == 0 || data.highlights[0] is string) &&
+             data.photoUrls is list && data.photoUrls.size() <= 12 &&
+             (data.photoUrls.size() == 0 || data.photoUrls[0] is string) &&
+             data.reviewVideoUrl is string && data.reviewVideoUrl.size() <= 500 &&
+             data.reviewVideoTitle is string && data.reviewVideoTitle.size() <= 180 &&
+             data.reviewSummary is string && data.reviewSummary.size() <= 800 &&
+             data.rating is number && data.rating >= 0 && data.rating <= 5 &&
+             data.reviewCount is int && data.reviewCount >= 0 &&
+             data.latitude is number && data.latitude >= -90 && data.latitude <= 90 &&
+             data.longitude is number && data.longitude >= -180 && data.longitude <= 180 &&
+             data.isPublished is bool &&
+             data.isFeatured is bool &&
+             data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+             (!('updatedByEmail' in data) || (data.updatedByEmail is string && data.updatedByEmail.size() <= 120)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidSavedPlace(data) {
+      return data.placeId is string && data.placeId.size() >= 1 && data.placeId.size() <= 128 &&
+             data.isBookmarked is bool &&
+             (!('isFavorite' in data) || data.isFavorite is bool) &&
+             data.isVisited is bool &&
+             data.personalNote is string && data.personalNote.size() <= 500 &&
+             data.userRating is number && data.userRating >= 0 && data.userRating <= 5 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // --- COLLECTIONS ---
+
+    // Admins lookup (read own status only; no client writes)
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && request.auth.uid == adminUid;
+      allow list, write: if false;
+    }
+
+    // Global Lucknow Places Catalog (published places readable by signed-in visitors; editable by Admin)
+    match /places/{placeId} {
+      allow get: if isSignedIn() && isValidId(placeId) && (existing().isPublished == true || isAdmin());
+      allow list: if isSignedIn() && existing().isPublished == true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(placeId) &&
+                       isValidPlace(incoming()) &&
+                       incoming().ownerId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'name', 'category', 'locality', 'address', 'timings', 'ticketPrice',
+                         'description', 'highlights', 'photoUrls', 'reviewVideoUrl',
+                         'reviewVideoTitle', 'reviewSummary', 'rating', 'reviewCount',
+                         'latitude', 'longitude', 'isPublished', 'isFeatured', 'ownerId',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'name', 'category', 'locality', 'address', 'timings', 'closedOn',
+                         'ticketPrice', 'bestTimeToVisit', 'description', 'highlights',
+                         'photoUrls', 'reviewVideoUrl', 'reviewVideoTitle', 'reviewSummary',
+                         'rating', 'reviewCount', 'latitude', 'longitude', 'isPublished',
+                         'isFeatured', 'ownerId', 'updatedByEmail', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isAdmin();
+
+      allow update: if isSignedIn() &&
+                       isValidId(placeId) &&
+                       isValidPlace(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().ownerId == existing().ownerId &&
+                       isAdmin() &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'name', 'category', 'locality', 'address', 'timings', 'closedOn',
+                         'ticketPrice', 'bestTimeToVisit', 'description', 'highlights',
+                         'photoUrls', 'reviewVideoUrl', 'reviewVideoTitle', 'reviewSummary',
+                         'rating', 'reviewCount', 'latitude', 'longitude', 'isPublished',
+                         'isFeatured', 'updatedByEmail', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(placeId) && isAdmin();
+    }
+
+    // User Profiles & User-Scoped Subcollections
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'email', 'photoUrl', 'createdAt', 'updatedAt']);
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'photoUrl', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      match /saved_places/{placeId} {
+        allow get, delete: if isSignedIn() && isValidId(userId) && isValidId(placeId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(placeId) &&
+                         request.auth.uid == userId &&
+                         isValidSavedPlace(incoming()) &&
+                         incoming().placeId == placeId &&
+                         incoming().keys().hasAll(['placeId', 'isBookmarked', 'isVisited', 'personalNote', 'userRating', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['placeId', 'isBookmarked', 'isFavorite', 'isVisited', 'personalNote', 'userRating', 'createdAt', 'updatedAt']);
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(placeId) &&
+                         request.auth.uid == userId &&
+                         isValidSavedPlace(incoming()) &&
+                         incoming().placeId == existing().placeId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['isBookmarked', 'isFavorite', 'isVisited', 'personalNote', 'userRating', 'updatedAt']);
+      }
+
+      match /custom_places/{placeId} {
+        allow get, delete: if isSignedIn() && isValidId(userId) && isValidId(placeId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(placeId) &&
+                         request.auth.uid == userId &&
+                         isValidPlace(incoming()) &&
+                         incoming().ownerId == request.auth.uid &&
+                         incoming().keys().hasAll([
+                           'name', 'category', 'locality', 'address', 'timings', 'ticketPrice',
+                           'description', 'highlights', 'photoUrls', 'reviewVideoUrl',
+                           'reviewVideoTitle', 'reviewSummary', 'rating', 'reviewCount',
+                           'latitude', 'longitude', 'isPublished', 'isFeatured', 'ownerId',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'name', 'category', 'locality', 'address', 'timings', 'closedOn',
+                           'ticketPrice', 'bestTimeToVisit', 'description', 'highlights',
+                           'photoUrls', 'reviewVideoUrl', 'reviewVideoTitle', 'reviewSummary',
+                           'rating', 'reviewCount', 'latitude', 'longitude', 'isPublished',
+                           'isFeatured', 'ownerId', 'updatedByEmail', 'createdAt', 'updatedAt'
+                         ]);
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(placeId) &&
+                         request.auth.uid == userId &&
+                         isValidPlace(incoming()) &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().ownerId == existing().ownerId &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'category', 'locality', 'address', 'timings', 'closedOn',
+                           'ticketPrice', 'bestTimeToVisit', 'description', 'highlights',
+                           'photoUrls', 'reviewVideoUrl', 'reviewVideoTitle', 'reviewSummary',
+                           'rating', 'reviewCount', 'latitude', 'longitude', 'isPublished',
+                           'isFeatured', 'updatedByEmail', 'updatedAt'
+                         ]);
+      }
+    }
+  }
+}

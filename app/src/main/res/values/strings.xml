@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Lucknow Guide</string>
+    <string name="sign_in_google">Sign in with Google</string>
+    <string name="welcome_title">Discover Lucknow</string>
+    <string name="welcome_subtitle">City of Nawabs • 110+ Curated Places</string>
+    <string name="nav_explore">Explore</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="nav_saved">My Trip</string>
+    <string name="nav_studio">Update Guide</string>
+    <string name="search_placeholder">Search monuments, kebabs, parks, markets…</string>
+    <string name="open_in_maps">Open in Maps</string>
+    <string name="watch_review_video">Watch Review Video</string>
+    <string name="update_place_action">Update Place</string>
+    <string name="add_place_action">Add New Place</string>
+    <string name="sync_cloud_action">Sync 110 Places to Cloud</string>
+</resources>

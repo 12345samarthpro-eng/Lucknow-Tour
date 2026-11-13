@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "Place": {
+      "title": "LucknowPlace",
+      "description": "A place to visit in Lucknow with timings, ticket prices, location, photos, review video, and editorial notes.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name of the landmark or attraction"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category such as Heritage & Monuments, Parks & Nature, Temples & Spiritual, Museums & Culture, Food & Cuisine, Markets & Shopping, Day Trips"
+        },
+        "locality": {
+          "type": "string",
+          "description": "Neighborhood or area in Lucknow"
+        },
+        "address": {
+          "type": "string",
+          "description": "Full street or landmark address"
+        },
+        "timings": {
+          "type": "string",
+          "description": "Opening and closing hours"
+        },
+        "closedOn": {
+          "type": "string",
+          "description": "Weekly closure day if any"
+        },
+        "ticketPrice": {
+          "type": "string",
+          "description": "Entry ticket fee breakdown"
+        },
+        "bestTimeToVisit": {
+          "type": "string",
+          "description": "Recommended season or time of day"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed guide description of the place"
+        },
+        "highlights": {
+          "type": "array",
+          "description": "Key attractions or things to do (max 10)"
+        },
+        "photoUrls": {
+          "type": "array",
+          "description": "Photo URLs for the place gallery (max 12)"
+        },
+        "reviewVideoUrl": {
+          "type": "string",
+          "description": "URL for the place review or walkthrough video"
+        },
+        "reviewVideoTitle": {
+          "type": "string",
+          "description": "Title of the review video"
+        },
+        "reviewSummary": {
+          "type": "string",
+          "description": "Curated review summary and visitor tips"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Average rating from 0 to 5"
+        },
+        "reviewCount": {
+          "type": "integer",
+          "description": "Number of reviews"
+        },
+        "latitude": {
+          "type": "number",
+          "description": "GPS latitude"
+        },
+        "longitude": {
+          "type": "number",
+          "description": "GPS longitude"
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "Whether the place is visible in the published guide"
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "description": "Whether the place is highlighted as featured"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the creator or admin"
+        },
+        "updatedByEmail": {
+          "type": "string",
+          "description": "Email of the last editor"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation (FieldValue.serverTimestamp())"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update (FieldValue.serverTimestamp())"
+        }
+      },
+      "required": [
+        "name",
+        "category",
+        "locality",
+        "address",
+        "timings",
+        "ticketPrice",
+        "description",
+        "highlights",
+        "photoUrls",
+        "reviewVideoUrl",
+        "reviewVideoTitle",
+        "reviewSummary",
+        "rating",
+        "reviewCount",
+        "latitude",
+        "longitude",
+        "isPublished",
+        "isFeatured",
+        "ownerId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedPlace": {
+      "title": "SavedPlace",
+      "description": "Per-user bookmark, visited status, personal rating, and travel notes for a Lucknow place.",
+      "type": "object",
+      "properties": {
+        "placeId": {
+          "type": "string",
+          "description": "ID of the Lucknow place"
+        },
+        "isBookmarked": {
+          "type": "boolean",
+          "description": "Whether saved to itinerary"
+        },
+        "isFavorite": {
+          "type": "boolean",
+          "description": "Whether the user marked this place as a favorite"
+        },
+        "isVisited": {
+          "type": "boolean",
+          "description": "Whether the visitor has checked in"
+        },
+        "personalNote": {
+          "type": "string",
+          "description": "Personal visit note"
+        },
+        "userRating": {
+          "type": "number",
+          "description": "User personal rating 0 to 5"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of update"
+        }
+      },
+      "required": [
+        "placeId",
+        "isBookmarked",
+        "isVisited",
+        "personalNote",
+        "userRating",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Signed-in visitor profile.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "photoUrl": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "displayName", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/places/{placeId}": {
+      "schema": { "$ref": "#/entities/Place" },
+      "description": "Global published Lucknow places catalog editable by verified admin/owner for live updates to all visitors."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile isolated to the authenticated user."
+    },
+    "/users/{userId}/saved_places/{placeId}": {
+      "schema": { "$ref": "#/entities/SavedPlace" },
+      "description": "User-owned bookmarks, visited status, and personal notes."
+    },
+    "/users/{userId}/custom_places/{placeId}": {
+      "schema": { "$ref": "#/entities/Place" },
+      "description": "User-owned custom places and personal place overrides."
+    }
+  }
+}

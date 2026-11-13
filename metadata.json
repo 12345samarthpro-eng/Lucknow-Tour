@@ -1,0 +1,6 @@
+{
+  "name": "Lucknow Guide",
+  "description": "Explore 105+ places to visit in Lucknow with timings, ticket prices, locations, photos, review videos, and live owner updates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
